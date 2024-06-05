@@ -30,9 +30,9 @@ class GridMapBuilder(Node):
             10)
         
         # Grid map parameters
-        self.map_size_x = 10  # in meters
+        self.map_size_x = 15  # in meters
         self.map_size_y = 10  # in meters
-        self.resolution = 0.01  # meters per cell
+        self.resolution = 1.0  # meters per cell
         self.grid_size_x = int(self.map_size_x / self.resolution)
         self.grid_size_y = int(self.map_size_y / self.resolution)
         self.grid_map = np.zeros((self.grid_size_x, self.grid_size_y), dtype=np.int8)
@@ -61,7 +61,11 @@ class GridMapBuilder(Node):
         
         robot_grid_x = int((self.current_pose.x / self.resolution) + (self.grid_size_x / 2))
         robot_grid_y = int((self.current_pose.y / self.resolution) + (self.grid_size_y / 2))
-        
+        print("x----")
+        print(robot_grid_x)
+        print("y----")
+        print(robot_grid_y)
+
         # Convert to grid coordinates
         grid_x = np.floor((x_coords / self.resolution) + (self.grid_size_x / 2)).astype(int)
         grid_y = np.floor((y_coords / self.resolution) + (self.grid_size_y / 2)).astype(int)

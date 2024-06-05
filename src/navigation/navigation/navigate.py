@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Pose2D, Point, Twist
+from nav_msgs.msg import Path
 import numpy as np
 
 class Navigate(Node):
@@ -11,6 +12,11 @@ class Navigate(Node):
             '/robot_pose',
             self.robot_pose_callback,
             10)
+        self.subscriber_path = self.create_subscription(
+            Path,
+            '/path',
+            self.path_callback,
+            10)
         self.publisher_cmd_vel = self.create_publisher(
             Twist,
             '/robot_cmd_vel',
@@ -19,40 +25,35 @@ class Navigate(Node):
 
         self.robot_pose = Pose2D()
         self.goal_point = Point()
-        self.waypoints = Point()
-        self.robot_pose_received = False
-
-        
-        # Define waypoints
-        self.waypoints = [
-            Point(x=0.0, y=3.5, z=0.0),
-            Point(x=3.5, y=3.5, z=0.0),
-            Point(x=-3.5, y=3.50, z=0.0),
-            Point(x=0.0, y=3.5, z=0.0),
-            Point(x=0.0, y=-3.5, z=0.0),
-            Point(x=-3.5, y=-3.5, z=0.0),
-            Point(x=-3.5, y=0.5, z=0.0),
-            Point(x=-3.5, y=-3.5, z=0.0),
-            Point(x=0.0, y=-3.5, z=0.0),
-            Point(x=3.5, y=-3.5, z=0.0),
-            Point(x=3.5, y=0.5, z=0.0),
-            Point(x=3.5, y=-3.5, z=0.0),
-        ]
+        self.waypoints = []
         self.current_waypoint_index = 0
-        self.goal_point = self.waypoints[self.current_waypoint_index]
-        self.goal_point_received = True
+        self.robot_pose_received = False
+        self.goal_point_received = False
 
     def robot_pose_callback(self, msg):
         self.robot_pose = msg
         self.robot_pose_received = True
-    
+
+    def path_callback(self, msg):
+        self.waypoints = [Point(x=pose.pose.position.x, y=pose.pose.position.y, z=0.0) for pose in msg.poses]
+        print("dasvad")
+        print(self.waypoints)
+        if self.waypoints:
+            self.goal_point = self.waypoints[0]
+            self.current_waypoint_index = 0
+            self.goal_point_received = True
+
     def navigate(self):
         if not self.robot_pose_received or not self.goal_point_received:
             return
 
-        dx = self.goal_point.x - self.robot_pose.x
-        dy = self.goal_point.y - self.robot_pose.y
-        print(self.goal_point)
+        dx = self.goal_point.x - self.robot_pose.x -7
+        dy = self.goal_point.y - self.robot_pose.y -3
+        print("x---")
+        print(dx)
+        print("y---")
+        print(dy)
+
         distance = np.sqrt(dx**2 + dy**2)
         goal_angle = np.arctan2(dy, dx)
         theta = goal_angle - self.robot_pose.theta
@@ -68,8 +69,6 @@ class Navigate(Node):
             cmd_vel.linear.y = np.min([0.2 * distance, 0.2])
             cmd_vel.angular.z = 2.0 * theta
         else:
-            cmd_vel.linear.x = 0.0
-            cmd_vel.angular.z = 0.0
             self.current_waypoint_index += 1
             if self.current_waypoint_index < len(self.waypoints):
                 self.goal_point = self.waypoints[self.current_waypoint_index]
@@ -77,8 +76,7 @@ class Navigate(Node):
                 self.goal_point_received = False  # Stop navigation after last waypoint
 
         self.publisher_cmd_vel.publish(cmd_vel)
-        return True
-        
+
 def main(args=None):
     rclpy.init(args=args)
     navigate = Navigate()
